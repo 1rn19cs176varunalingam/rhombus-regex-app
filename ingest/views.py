@@ -64,6 +64,8 @@ class TransformView(APIView):
             if not target_cols:
                 return Response({"error":"No valid target columns found"},status=status.HTTP_400_BAD_REQUEST)
             regex_pattern=request.POST.get("pattern") or ""
+            if regex_pattern.strip()=="":
+                return Response({"error":"No regex pattern provided"},status=status.HTTP_400_BAD_REQUEST)
             replacement=request.POST.get("replacement") or ""
 
 
