@@ -1,35 +1,97 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import axios from 'axios'
 
-function App() {
-  const [count, setCount] = useState(0)
+const API_BASE= import.meta.env.VITE_API_BASE;
 
-  return (
-    <>
+export default function App(){
+  const [message, setMessage] = useState("");
+  const [eror, setError] = useState("");
+  const [file, setFile]=useState(null);
+  const [preview, setPreview]=useState(null);
+  const [loading, setLoading]=useState(false);
+
+  async function ping(){
+    
+    setError("");
+    setMessage("");
+
+    try{
+      const response = await axios.get(`${API_BASE}` + "/health/");
+      setMessage(response.data.status);
+    }catch(error){
+      setError("Could not fetch data");
+    }
+  }
+    return(
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+        <h1>API Health Check</h1>
+        <button onClick={ping}>Ping API</button>
+        <form onSubmit={(e)=>e.preventDefault()} style={{display:"flex",gap:12,alignItems:"center"}}>
+          <input type="file" accept =".csv,.xlsx" onChange={(e)=>setFile(e.target.files?.[0] || null)} />
+          <button type="submit">Upload</button>
+        </form>
+        <div style={{ marginTop: 8, fontSize: 14 }}>
+            {file ? <>Selected: <strong>{file.name}</strong></> : "No file chosen"}
+        </div>
 
-export default App
+        <button onClick={uploadFile} disabled={loading} style={{marginTop:12}}>
+          {loading ? "Uploading..." : "Upload and Preview"}
+        </button>
+        {preview && (
+          <pre style={{ marginTop: 12, background: "black", padding: 12, borderRadius: 4, maxHeight: 400, overflow: "auto" }}>
+            {JSON.stringify(preview, null, 2)}
+          </pre>  
+        )}
+
+
+
+
+
+
+
+        {message && <p style={{color: 'green'}}>Message from API: {message}</p>}
+        {eror && <p style={{color: 'red'}}>Error: {eror}</p>}
+      </div>
+
+    );
+
+    async function uploadFile(){
+      setPreview(null);
+      setError("");
+      if(!file){
+        setError("Please select a file");
+        return;
+      }
+      const form = new FormData();
+      form.append("file", file);
+      try{
+        setLoading(true);
+      const {data}= await axios.post(`${API_BASE}` + "/upload/preview/", form, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+      },});
+      setPreview(data.preview);
+      }catch(error){
+        setError("Could not upload file");
+      }finally{
+        setLoading(false);
+      } 
+
+
+
+  }
+}
+  
+        
+
+  
+
+
+
+
+
+
+
+
+
+
