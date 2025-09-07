@@ -1,16 +1,21 @@
 import { useState } from 'react'
 import axios from 'axios'
+import Table from './components/Table';
+import FileUpload from './components/FileUpload';
+import RegexInstruction from './components/RegexInstruction';
+import RegexForm from './components/RegexForm';
+import Result from './components/Result';
+import './App.css'
+
 
 const API_BASE= import.meta.env.VITE_API_BASE;
 
 export default function App(){
   const [message, setMessage] = useState("");
-  const [eror, setError] = useState("");
+  const [error, setError] = useState("");
   const [file, setFile]=useState(null);
   const [preview, setPreview]=useState(null);
   const [loading, setLoading]=useState(false);
-
-
   const[pattern,setPattern]=useState("");
   const[replacement,setReplacement]=useState("");
   const[columns,setColumns]=useState("");
@@ -74,7 +79,6 @@ export default function App(){
       form.append("file", file);
       form.append("pattern", pattern);
       form.append("replacement", replacement);
-      form.append("flags", flags);
       if(columns.trim())form.append("columns", columns);
       if(flags.trim())form.append("flags", flags);
       try{
@@ -153,52 +157,22 @@ export default function App(){
   }
 
   
-  function Table({ columns = [], rows = [] }) {
-    return (
-      <div style={{ maxHeight: 480, overflow: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ position: "sticky", top: 0, background: "#2c1355ff" }}>
-            <tr>
-              {columns.map((c) => (
-                <th key={c} style={{ textAlign: "left", borderBottom: "1px solid #982323ff", padding: "8px" }}>{c}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i}>
-                {columns.map((c) => (
-                  <td key={c} style={{ borderBottom: "1px solid #960404ff", padding: "8px", fontSize: 14 }}>
-                    {String(r?.[c] ?? "")}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
 
 
     return(
       <div>
         <h1>API Health Check</h1>
         <button onClick={ping}>Ping API</button>
-        <form onSubmit={(e)=>e.preventDefault()} style={{display:"flex",gap:12,alignItems:"center"}}>
-          <input type="file" accept =".csv,.xlsx" onChange={(e)=>setFile(e.target.files?.[0] || null)} />
-         
-        </form>
-        <div style={{ marginTop: 8, fontSize: 14 }}>
-            {file ? <>Selected: <strong>{file.name}</strong></> : "No file chosen"}
-        </div>
-
-        <button onClick={uploadFile} disabled={loading} style={{marginTop:12}}>
-          {loading ? "Uploading..." : "Upload and Preview"}
-        </button>
+        <FileUpload
+          file={file}
+          setFile={setFile}
+          uploadFile={uploadFile}
+          loading={loading}
+        />
         {preview && (
-          
+ 
           <div style={{ marginTop: 20 }}>
+            <h2>File uploaded and Preview:</h2>
             <pre style={{color: "white"}}>{JSON.stringify(preview, null, 2)}</pre>
             <div style={{ marginBottom: 8 }}>
               <strong>File:</strong> {preview.filename} &nbsp;|&nbsp;
@@ -215,100 +189,34 @@ export default function App(){
 
         )}
 
-        <div style={{marginTop: 24, fontSize: 18, fontWeight: "bold"}}>
-          <label style={{fontsize:13,marginBottom:4}}> Desribe the patter you wanna change
-          <input type='text' placeholder='e.g. redact email addresses' value={instructions} onChange={(e)=>setInstructions(e.target.value)} style={{width:"100%", padding:8}}/></label>
-            <button onClick={convertInstruction} disabled={loading || !instructions.trim()} style={{ padding: "8px 14px", marginTop: 8 }}>
-    {loading ? "Converting..." : "Convert to Regex"}
-  </button>
-          
-        </div>
+        <RegexInstruction
+          instructions={instructions}
+          setInstructions={setInstructions}
+          convertInstruction={convertInstruction}
+          loading={loading}
+        />
         <button onClick={analyzeRegex} disabled={!pattern}>
           Risk Analysis:(Before changing data)
         </button>
         {analysis && <div className="analysis-box">{analysis}</div>}
 
 
-        <div style={{ marginTop: 24, padding: 12, border: "1px solid #eee", borderRadius: 8 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <label>
-            <div style={{ fontSize: 13, marginBottom: 4 }}>Regex pattern</div>
-            <input
-              type="text"
-              placeholder="e.g. \\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,7}\\b"
-              value={pattern}
-              onChange={(e) => setPattern(e.target.value)}
-              style={{ width: "100%", padding: 8 }}
-            />
-          </label>
+          <RegexForm
+            pattern={pattern}
+            setPattern={setPattern}
+            replacement={replacement}
+            setReplacement={setReplacement}
+            columns={columns}
+            setColumns={setColumns}
+            flags={flags}
+            setFlags={setFlags}
+            loading={loading}
+            preview={preview}
+            Transform={Transform}
+        />
 
-          <label>
-            <div style={{ fontSize: 13, marginBottom: 4 }}>Replacement</div>
-            <input
-              type="text"
-              placeholder="e.g. REDACTED"
-              value={replacement}
-              onChange={(e) => setReplacement(e.target.value)}
-              style={{ width: "100%", padding: 8 }}
-            />
-          </label>
-
-          <label>
-            <div style={{ fontSize: 13, marginBottom: 4 }}>Columns (optional)</div>
-            <input
-              type="text"
-              placeholder="e.g. Email, Notes (leave empty = all text cols)"
-              value={columns}
-              onChange={(e) => setColumns(e.target.value)}
-              style={{ width: "100%", padding: 8 }}
-            />
-          </label>
-
-          <label>
-            <div style={{ fontSize: 13, marginBottom: 4 }}>Flags (optional)</div>
-            <input
-              type="text"
-              placeholder="e.g. i (ignore case), m, s"
-              value={flags}
-              onChange={(e) => setFlags(e.target.value)}
-              style={{ width: "100%", padding: 8 }}
-            />
-          </label>
-        </div>
-      </div>
-      <button onClick={Transform} disabled={loading || !preview} style={{ marginTop: 12 }}>
-        {loading ? "Transforming..." : "Transform Data"}
-       </button>
-      {result && (
-        <div id="transform-result" style={{ marginTop: 24 }}>
-          <div style={{ marginBottom: 8 }}>
-            <strong>File:</strong> {result.filename} &nbsp;|&nbsp;
-            <strong>Rows×Cols:</strong> {result.shape?.[0]} × {result.shape?.[1]} &nbsp;|&nbsp;
-            <strong>Matched cells:</strong> {result.matches} &nbsp;|&nbsp;
-            <strong>Target columns:</strong> {result.columns?.join(", ") || "—"}
-          </div> 
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Before (first 10 rows)</div>
-              <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
-                <Table columns={result.columns} rows={result.before} />
-              </div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>After (first 10 rows)</div>
-              <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
-                <Table
-                columns={result.columns}
-                rows={result.after.filter((row, i) =>
-                  JSON.stringify(row) !== JSON.stringify(result.before[i])
-                )}
-              />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        <Result result={result} />
+      
 
 
 
@@ -316,7 +224,7 @@ export default function App(){
 
 
         {message && <p style={{color: 'green'}}>Message from API: {message}</p>}
-        {eror && <p style={{color: 'red'}}>Error: {eror}</p>}
+        {error && <p style={{color: 'red'}}>Error: {eror}</p>}
       </div>
 
 
