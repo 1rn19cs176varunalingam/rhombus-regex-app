@@ -8,6 +8,7 @@ import pandas as pd
 import io
 import numpy as np
 import re
+import json
 # Create your views here.
 class HealthView(APIView):
     def get(self, request):
@@ -92,6 +93,7 @@ class TransformView(APIView):
 class NL2RegexView(APIView):
     def post(self,request):
         instruction=request.data.get("instruction","").strip()
+        columns=request.data.get("columns",[])
         if not instruction:
             return Response({"error":"No instruction provided"},status=status.HTTP_400_BAD_REQUEST)
         api_key=os.getenv("OPENAI_API_KEY")
@@ -100,21 +102,57 @@ class NL2RegexView(APIView):
         try:
             client=OpenAI(api_key=api_key)
             sys=(
-            "You convert natural-language text-matching requests into a SINGLE Python-compatible regex. "
-              "Return ONLY the regex pattern string, no code fences, no prose.")
-            user=f"Instruction::{instruction}\nOutput only the regex."
+              "You are a converter from natural-language instructions into REGEX + REPLACEMENT + FLAGS + TARGET COLUMNS. "
+  "Output JSON with: 'pattern', 'replacement', 'flags', 'suggested_columns'. "
+  "- 'pattern': Python regex. "
+  "- 'replacement': literal or group-aware replacement string. "
+  "- 'flags': use short letters only: 'i' for IGNORECASE, 'm' for MULTILINE, 's' for DOTALL. "
+  "- 'suggested_columns': pick from provided columns. "
+  "Return JSON only."
+  "Only generate regex patterns that are compatible with Python's re module. Do not use variable-width look-behind or look-ahead.")
+            user_msg=f"Instruction: {instruction}\nAvailable Columns: {columns}"
+
             resp=client.chat.completions.create(
                 model="gpt-4o-mini"
                 ,messages=[{"role":"system","content":sys},
-                          {"role":"user","content":user}],
+                          {"role":"user","content":user_msg}],
                           temperature=0.2,
                           max_tokens=200,
             )
-            pattern=(resp.choices[0].message.content or "").strip()
-            re.compile(pattern)
-        except exception as e:
+            fulloutput=resp.choices[0].message.content.strip()
+
+            parsed=json.loads(fulloutput)
+            pattern=parsed.get("pattern","")
+            replacement=parsed.get("replacement","")
+            flags=parsed.get("flags","")
+            suggested_columns=parsed.get("suggested_columns",[])
+
+        except Exception as e:
             return Response({"error":f"Error generating regex: {str(e)}"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        return Response({"regex_pattern":pattern})
+        return Response({"pattern":pattern,"replacement":replacement,"suggested_columns":suggested_columns,"flags":flags})
+class RegexRiskAnalyzer(APIView):
+    def post(self,request):
+        pattern=(request.data or {}).get("pattern","").strip()
+        if not pattern:
+            return Response({"error":"No regex pattern provided"},status=status.HTTP_400_BAD_REQUEST)
+        try:
+            re.compile(pattern)
+        except re.error as e:
+            return Response({"error":f"Invalid regex pattern: {str(e)}"},status=status.HTTP_400_BAD_REQUEST)
+        client=OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        sys=("You are a regex risk analyzer. "
+          "Given a regex pattern, output a plain-language explanation, risks (like false positives, catastrophic backtracking), "
+          "and a readability score (low/medium/high). Keep output under 6 sentences.")
+        resp=client.chat.completions.create(
+            model="gpt-4o-mini"
+            ,messages=[{"role":"system","content":sys},
+                      {"role":"user","content":f"Regex Pattern: {pattern}"}],
+                      temperature=0.3,
+                      max_tokens=300,
+        )
+        analysis=resp.choices[0].message.content.strip()
+        return Response({"pattern":pattern,"analysis":analysis})    
+
 
 
             

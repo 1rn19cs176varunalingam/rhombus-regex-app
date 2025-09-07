@@ -15,8 +15,11 @@ export default function App(){
   const[replacement,setReplacement]=useState("");
   const[columns,setColumns]=useState("");
   const[flags,setFlags]=useState("");
+  const[analysis,setAnalysis]=useState(null);
 
   const[result,setResult]=useState(null);
+
+  const[instructions,setInstructions]=useState("");
 
   async function ping(){
     
@@ -30,6 +33,154 @@ export default function App(){
       setError("Could not fetch data");
     }
   }
+      async function uploadFile(){
+      setPreview(null);
+      setError("");
+      if(!file){
+        setError("Please select a file");
+        return;
+      }
+      const form = new FormData();
+      form.append("file", file);
+      try{
+        setLoading(true);
+      const {data}= await axios.post(`${API_BASE}` + "/upload/preview/", form, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+      },});
+      setPreview(data.preview);
+      }catch(error){
+        setError("Could not upload file");
+      }finally{
+        setLoading(false);
+      } 
+    }
+
+    async function Transform()
+    {
+      setResult(null);
+      setError("");
+      if( !file)
+      {
+        setError("please upload a file first");
+        return;
+      }
+      if(!pattern.trim())
+      {
+        setError("Please provide a regex pattern");
+        return;
+      }
+      const form = new FormData();
+      form.append("file", file);
+      form.append("pattern", pattern);
+      form.append("replacement", replacement);
+      form.append("flags", flags);
+      if(columns.trim())form.append("columns", columns);
+      if(flags.trim())form.append("flags", flags);
+      try{
+        setLoading(true);
+      const {data}= await axios.post(`${API_BASE}` + "/transform/", form, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+      },});
+      setResult(data);
+
+      document.querySelector("#transform-result")?.scrollIntoView({ behavior: "smooth" });
+
+      }catch(error){
+        const msg=error?.response?.data?.error || error.message || "Could not transform file";
+        setError(msg);
+      }finally{
+        setLoading(false);
+      }
+
+
+
+
+
+    }
+    async function convertInstruction(){
+      setError("");
+      if(!instructions.trim()){
+        setError("Please provide instructions");
+        return;
+      }
+      try{
+        setLoading(true);
+        const columns = preview.length > 0 ? Object.keys(preview[0]) : [];
+        const {data} = await axios.post(`${API_BASE}/nl2regex/`, { instruction: instructions, columns: columns || [] });
+        if(data?.pattern){
+          setPattern(data.pattern);
+        }
+        if(data?.replacement){
+          setReplacement(data.replacement);
+        }
+        if(data?.suggested_columns?.length){
+          setColumns(data.suggested_columns.join(", "));
+        }
+        if(data?.flags){
+          setFlags(data.flags);
+        }
+        setMessage("Successfully converted instructions to regex");
+
+      }
+        catch(error){
+          const msg=error?.response?.data?.error || error.message || "Could not convert instructions";
+          setError(msg);
+        }finally{
+          setLoading(false);
+    }
+  }
+  async function analyzeRegex(){
+    setAnalysis(null);
+    setError("");
+    if(!pattern.trim()){
+      setError("Please provide a regex pattern");
+      return;
+    }
+    try{
+      setLoading(true);
+      const {data}= await axios.post(`${API_BASE}` + "/risk/", { pattern});
+      setAnalysis(data.analysis);
+      document.querySelector(".analysis-box")?.scrollIntoView({ behavior: "smooth" });
+  }
+    catch(error){
+      const msg=error?.response?.data?.error || error.message || "Could not analyze regex";
+      setError(msg);
+    }finally{
+      setLoading(false);
+    }
+  }
+
+  
+  function Table({ columns = [], rows = [] }) {
+    return (
+      <div style={{ maxHeight: 480, overflow: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead style={{ position: "sticky", top: 0, background: "#2c1355ff" }}>
+            <tr>
+              {columns.map((c) => (
+                <th key={c} style={{ textAlign: "left", borderBottom: "1px solid #982323ff", padding: "8px" }}>{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                {columns.map((c) => (
+                  <td key={c} style={{ borderBottom: "1px solid #960404ff", padding: "8px", fontSize: 14 }}>
+                    {String(r?.[c] ?? "")}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+
     return(
       <div>
         <h1>API Health Check</h1>
@@ -54,12 +205,29 @@ export default function App(){
               <strong>Rows×Cols:</strong> {preview.length} × {preview.length > 0 ? Object.keys(preview[0]).length : 0}
             </div>
             <div style={{ border: "1px solid #a01e1eff", borderRadius: 8, overflow: "hidden" }}>
-              <Table columns={preview.length > 0 ? Object.keys(preview[0]) : []} rows={preview} />
+              <Table columns={preview.length > 0 ? 
+                Object.keys(preview[0]) : []} rows={preview} />
+
             </div>
           </div>
           
+          
 
         )}
+
+        <div style={{marginTop: 24, fontSize: 18, fontWeight: "bold"}}>
+          <label style={{fontsize:13,marginBottom:4}}> Desribe the patter you wanna change
+          <input type='text' placeholder='e.g. redact email addresses' value={instructions} onChange={(e)=>setInstructions(e.target.value)} style={{width:"100%", padding:8}}/></label>
+            <button onClick={convertInstruction} disabled={loading || !instructions.trim()} style={{ padding: "8px 14px", marginTop: 8 }}>
+    {loading ? "Converting..." : "Convert to Regex"}
+  </button>
+          
+        </div>
+        <button onClick={analyzeRegex} disabled={!pattern}>
+          Risk Analysis:(Before changing data)
+        </button>
+        {analysis && <div className="analysis-box">{analysis}</div>}
+
 
         <div style={{ marginTop: 24, padding: 12, border: "1px solid #eee", borderRadius: 8 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -130,7 +298,12 @@ export default function App(){
             <div>
               <div style={{ fontWeight: 600, marginBottom: 6 }}>After (first 10 rows)</div>
               <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
-                <Table columns={result.columns} rows={result.after} />
+                <Table
+                columns={result.columns}
+                rows={result.after.filter((row, i) =>
+                  JSON.stringify(row) !== JSON.stringify(result.before[i])
+                )}
+              />
               </div>
             </div>
           </div>
@@ -148,103 +321,11 @@ export default function App(){
 
 
     );
-
-    async function uploadFile(){
-      setPreview(null);
-      setError("");
-      if(!file){
-        setError("Please select a file");
-        return;
-      }
-      const form = new FormData();
-      form.append("file", file);
-      try{
-        setLoading(true);
-      const {data}= await axios.post(`${API_BASE}` + "/upload/preview/", form, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-      },});
-      setPreview(data.preview);
-      }catch(error){
-        setError("Could not upload file");
-      }finally{
-        setLoading(false);
-      } 
-    }
-
-    async function Transform()
-    {
-      setResult(null);
-      setError("");
-      if( !file)
-      {
-        setError("please upload a file first");
-        return;
-      }
-      if(!pattern.trim())
-      {
-        setError("Please provide a regex pattern");
-        return;
-      }
-      const form = new FormData();
-      form.append("file", file);
-      form.append("pattern", pattern);
-      form.append("replacement", replacement);
-      if(columns.trim())form.append("columns", columns);
-      if(flags.trim())form.append("flags", flags);
-      try{
-        setLoading(true);
-      const {data}= await axios.post(`${API_BASE}` + "/transform/", form, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-      },});
-      setResult(data);
-
-      document.querySelector("#transform-result")?.scrollIntoView({ behavior: "smooth" });
-
-      }catch(error){
-        const msg=error?.response?.data?.error || error.message || "Could not transform file";
-        setError(msg);
-      }finally{
-        setLoading(false);
-      }
-
-
-
-
-
-    }
-
-  function Table({ columns = [], rows = [] }) {
-    return (
-      <div style={{ maxHeight: 480, overflow: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ position: "sticky", top: 0, background: "#2c1355ff" }}>
-            <tr>
-              {columns.map((c) => (
-                <th key={c} style={{ textAlign: "left", borderBottom: "1px solid #982323ff", padding: "8px" }}>{c}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i}>
-                {columns.map((c) => (
-                  <td key={c} style={{ borderBottom: "1px solid #960404ff", padding: "8px", fontSize: 14 }}>
-                    {String(r?.[c] ?? "")}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
   }
 
 
   
-}
+
   
         
 
