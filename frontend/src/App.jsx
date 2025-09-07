@@ -38,10 +38,21 @@ export default function App(){
           {loading ? "Uploading..." : "Upload and Preview"}
         </button>
         {preview && (
-          <pre style={{ marginTop: 12, background: "black", padding: 12, borderRadius: 4, maxHeight: 400, overflow: "auto" }}>
-            {JSON.stringify(preview, null, 2)}
-          </pre>  
+          
+          <div style={{ marginTop: 20 }}>
+            <pre style={{color: "white"}}>{JSON.stringify(preview, null, 2)}</pre>
+            <div style={{ marginBottom: 8 }}>
+              <strong>File:</strong> {preview.filename} &nbsp;|&nbsp;
+              <strong>Rows×Cols:</strong> {preview.length} × {preview.length > 0 ? Object.keys(preview[0]).length : 0}
+            </div>
+            <div style={{ border: "1px solid #a01e1eff", borderRadius: 8, overflow: "hidden" }}>
+              <Table columns={preview.length > 0 ? Object.keys(preview[0]) : []} rows={preview} />
+            </div>
+          </div>
+          
         )}
+
+        
 
 
 
@@ -76,10 +87,36 @@ export default function App(){
       }finally{
         setLoading(false);
       } 
-
-
-
+    }
+  function Table({ columns = [], rows = [] }) {
+    return (
+      <div style={{ maxHeight: 480, overflow: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead style={{ position: "sticky", top: 0, background: "#2c1355ff" }}>
+            <tr>
+              {columns.map((c) => (
+                <th key={c} style={{ textAlign: "left", borderBottom: "1px solid #982323ff", padding: "8px" }}>{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                {columns.map((c) => (
+                  <td key={c} style={{ borderBottom: "1px solid #960404ff", padding: "8px", fontSize: 14 }}>
+                    {String(r?.[c] ?? "")}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   }
+
+
+  
 }
   
         
