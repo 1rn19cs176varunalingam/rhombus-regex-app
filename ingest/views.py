@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from openai import OpenAI
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -85,8 +86,35 @@ class TransformView(APIView):
                 matches+=df[col].astype(str).apply(lambda x: bool(rx.search(x)) if x not in [None,"nan","NaN"] else False).sum()
                 df[col]=df[col].astype(str).apply(lambda x: rx.sub(replacement,x) if x not in [None,"nan","NaN"] else x)
             after=df[target_cols].head(5).replace({np.nan:None}).to_dict(orient="records")
-            return Response({"filename":fname,"columns":list(map(str,df.columns)),"regex_pattern":regex_pattern,"replacement":replacement,
+            return Response({"filename":fname,"columns":list(target_cols),"regex_pattern":regex_pattern,"replacement":replacement,
                              "shape":df.shape,"matches":int(matches),"before":before,"after":after,})
         
+class NL2RegexView(APIView):
+    def post(self,request):
+        instruction=request.data.get("instruction","").strip()
+        if not instruction:
+            return Response({"error":"No instruction provided"},status=status.HTTP_400_BAD_REQUEST)
+        api_key=os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return Response({"error":"OpenAI API key not configured"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        try:
+            client=OpenAI(api_key=api_key)
+            sys=(
+            "You convert natural-language text-matching requests into a SINGLE Python-compatible regex. "
+              "Return ONLY the regex pattern string, no code fences, no prose.")
+            user=f"Instruction::{instruction}\nOutput only the regex."
+            resp=client.chat.completions.create(
+                model="gpt-4o-mini"
+                ,messages=[{"role":"system","content":sys},
+                          {"role":"user","content":user}],
+                          temperature=0.2,
+                          max_tokens=200,
+            )
+            pattern=(resp.choices[0].message.content or "").strip()
+            re.compile(pattern)
+        except exception as e:
+            return Response({"error":f"Error generating regex: {str(e)}"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"regex_pattern":pattern})
+
+
             
-        
