@@ -6,6 +6,10 @@ export default function FileUpload({ file, setFile, uploadFile, loading, onPrevi
         accept=".csv,.xlsx"
         onChange={e => setFile(e.target.files?.[0] || null)}
       />
+    {file
+        ? <span className="text-gray-700 text-sm">{file.name}</span>
+        : <span className="text-gray-400 text-sm">No file chosen</span>
+      }
       <button
         onClick={uploadFile}
         disabled={loading}

@@ -23,9 +23,7 @@ export default function ResultSection({ result }) {
           <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
             <Table
               columns={result.columns}
-              rows={result.after.filter((row, i) =>
-                JSON.stringify(row) !== JSON.stringify(result.before[i])
-              )}
+              rows={result.after}
             />
           </div>
         </div>
