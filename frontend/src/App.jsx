@@ -5,12 +5,17 @@ import FileUpload from './components/FileUpload';
 import RegexInstruction from './components/RegexInstruction';
 import RegexForm from './components/RegexForm';
 import Result from './components/Result';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
+import PreviewPage from "./components/PreviewPage";
+
 import './App.css'
 
 
 const API_BASE= import.meta.env.VITE_API_BASE;
 
 export default function App(){
+
+  const navigate=useNavigate();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [file, setFile]=useState(null);
@@ -41,6 +46,7 @@ export default function App(){
       async function uploadFile(){
       setPreview(null);
       setError("");
+      setMessage("");
       if(!file){
         setError("Please select a file");
         return;
@@ -54,13 +60,16 @@ export default function App(){
           "Content-Type": "multipart/form-data"
       },});
       setPreview(data.preview);
+      setMessage("File uploaded successfully");
       }catch(error){
         setError("Could not upload file");
       }finally{
         setLoading(false);
       } 
     }
-
+    function handlePreview(){
+      navigate("/preview");
+    }
     async function Transform()
     {
       setResult(null);
@@ -159,78 +168,61 @@ export default function App(){
   
 
 
-    return(
-      <div>
-        <h1>API Health Check</h1>
-        <button onClick={ping}>Ping API</button>
-        <FileUpload
-          file={file}
-          setFile={setFile}
-          uploadFile={uploadFile}
-          loading={loading}
-        />
-        {preview && (
- 
-          <div style={{ marginTop: 20 }}>
-            <h2>File uploaded and Preview:</h2>
-            <pre style={{color: "white"}}>{JSON.stringify(preview, null, 2)}</pre>
-            <div style={{ marginBottom: 8 }}>
-              <strong>File:</strong> {preview.filename} &nbsp;|&nbsp;
-              <strong>Rows×Cols:</strong> {preview.length} × {preview.length > 0 ? Object.keys(preview[0]).length : 0}
+  return (
+    <div>
+      <h1 className="text-4xl font-extrabold text-center text-blue-600 py-6 mb-8 border-b border-gray-300">
+        Regex Pattern Matcher
+      </h1>
+      <h1>API Health Check</h1>
+      <button onClick={ping}>Ping API</button>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <div>
+              <FileUpload
+                file={file}
+                setFile={setFile}
+                uploadFile={uploadFile}
+                loading={loading}
+                onPreview={handlePreview}
+                previewReady={!!preview}
+              />
+              <RegexInstruction
+                instructions={instructions}
+                setInstructions={setInstructions}
+                convertInstruction={convertInstruction}
+                loading={loading}
+                preview={preview}
+              />
+              <button onClick={analyzeRegex} disabled={!pattern}>
+                Risk Analysis:(Before changing data)
+              </button>
+              {analysis && <div className="analysis-box">{analysis}</div>}
+              <RegexForm
+                pattern={pattern}
+                setPattern={setPattern}
+                replacement={replacement}
+                setReplacement={setReplacement}
+                columns={columns}
+                setColumns={setColumns}
+                flags={flags}
+                setFlags={setFlags}
+                loading={loading}
+                preview={preview}
+                Transform={Transform}
+              />
+              <Result result={result} />
+              {message && <p style={{ color: 'green' }}>Message from API: {message}</p>}
+              {error && <p style={{ color: 'red' }}>Error: {error}</p>}
             </div>
-            <div style={{ border: "1px solid #a01e1eff", borderRadius: 8, overflow: "hidden" }}>
-              <Table columns={preview.length > 0 ? 
-                Object.keys(preview[0]) : []} rows={preview} />
-
-            </div>
-          </div>
-          
-          
-
-        )}
-
-        <RegexInstruction
-          instructions={instructions}
-          setInstructions={setInstructions}
-          convertInstruction={convertInstruction}
-          loading={loading}
+          }
         />
-        <button onClick={analyzeRegex} disabled={!pattern}>
-          Risk Analysis:(Before changing data)
-        </button>
-        {analysis && <div className="analysis-box">{analysis}</div>}
-
-
-          <RegexForm
-            pattern={pattern}
-            setPattern={setPattern}
-            replacement={replacement}
-            setReplacement={setReplacement}
-            columns={columns}
-            setColumns={setColumns}
-            flags={flags}
-            setFlags={setFlags}
-            loading={loading}
-            preview={preview}
-            Transform={Transform}
-        />
-
-        <Result result={result} />
-      
-
-
-
-
-
-
-        {message && <p style={{color: 'green'}}>Message from API: {message}</p>}
-        {error && <p style={{color: 'red'}}>Error: {eror}</p>}
-      </div>
-
-
-    );
-  }
-
+        <Route path="/preview" element={<PreviewPage preview={preview} />} />
+      </Routes>
+    </div>
+  );
+}
 
   
 
