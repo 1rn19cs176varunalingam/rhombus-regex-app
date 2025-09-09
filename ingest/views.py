@@ -11,7 +11,22 @@ import numpy as np
 import re
 import json
 import uuid
+import boto3
+import requests
+import time
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import regexp_replace
 # Create your views here.
+
+def upload_s3(local_path, bucket, s3_key):
+    s3 = boto3.client('s3')
+    s3.upload_file(local_path, bucket, s3_key)
+    return f"s3://{bucket}/{s3_key}"
+
+
+
+
+
 class HealthView(APIView):
     def get(self, request):
         return Response({"status": "ok"})
@@ -246,6 +261,115 @@ class DownloadTransformedView(APIView):
                 return Response({"error": "File not found"}, status=404)
             return FileResponse(open(file_path, "rb"), as_attachment=True, filename="changed_file.csv")
 
+class Databricks(APIView):
+    def post(self,request):
+        f=request.FILES.get("file")
+        if not f:
+            return Response({"error":"No file provided"},status=status.HTTP_400_BAD_REQUEST)
+        else:
+            fname=f.name
+            ext=os.path.splitext(fname)[1].lower()
+            temp_path = f"/tmp/{uuid.uuid4()}{ext}"
+            with open(temp_path, "wb") as temp_file:
+                temp_file.write(f.read())
 
+
+        s3_bucket = "rhombus-regex-app-bucket"
+        s3_key = f"uploads/{uuid.uuid4()}{ext}"
+        s3_input_path = upload_s3(temp_path, s3_bucket, s3_key)
+        s3_output_key = f"outputs/{uuid.uuid4()}{ext}"
+        s3_output_path = f"s3://{s3_bucket}/{s3_output_key}"
+
+        # 3. Submit Databricks job
+        DATABRICKS_INSTANCE = "https://<your-instance>.cloud.databricks.com"
+        DATABRICKS_TOKEN = "<your-databricks-token>"
+        CLUSTER_ID = "<your-cluster-id>"
+        NOTEBOOK_PATH = "/Users/youruser/your_notebook"
+
+        pattern=request.POST.get("pattern","")
+        replacement=request.POST.get("replacement","")
+        columns=request.POST.get("columns","")
+        headers = {"Authorization": f"Bearer {DATABRICKS_TOKEN}"}
+        payload = {
+            "run_name": "Large File Processing",
+            "existing_cluster_id": CLUSTER_ID,
+            "notebook_task": {
+                "notebook_path": NOTEBOOK_PATH,
+                "base_parameters": {
+                    "input_path": s3_input_path,
+                    "output_path": s3_output_path,
+                    "pattern": pattern,
+                    "replacement": replacement,
+                    "columns": columns
+                }
+            }
+        }
+        resp=request.post(f"{DATABRICKS_INSTANCE}/api/2.1/jobs/runs/submit", headers=headers, json=payload)
+        if resp.status_code!=200:
+            return Response({"error":"Error submitting Databricks job","details":resp.text},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        run_id=resp.json().get("run_id")
+        while True:
+            status_resp=requests.get(f"{DATABRICKS_INSTANCE}/api/2.1/jobs/runs/get?run_id={run_id}", headers=headers)
+            state=status_resp.json()["state"]["life_cycle_state"]
+            if state in ["TERMINATED","SKIPPED","INTERNAL_ERROR"]:
+                break
+            time.sleep(10)
+        s3=boto3.client('s3')
+        try:
+            presigned_url=s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket':s3_bucket,'Key':s3_output_key},
+                ExpiresIn=3600
+            )
+        except Exception as e:
+            return Response({"error":f"Error generating presigned URL: {str(e)}"},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"download_url":presigned_url, "filename":fname,"engine":"databricks"})
+class LocalSparkTransformView(APIView):
+    def post(self,request):
+        f=request.FILES.get("file")
+        if not f:
+            return Response({"error":"No file provided"},status=status.HTTP_400_BAD_REQUEST)
+        else:
+            fname=f.name
+            ext=os.path.splitext(fname)[1].lower()
+            temp_path = f"/tmp/{uuid.uuid4()}{ext}"
+            with open(temp_path, "wb") as temp_file:
+                temp_file.write(f.read())
+        try:
+            spark = SparkSession.builder.appName("RegexTransform").getOrCreate()
+            if ext == ".csv":
+                df = spark.read.csv(temp_path, header=True, inferSchema=True)
+            elif ext in [".xlsx", ".xls"]:
+                df = spark.read.format("com.crealytics.spark.excel") \
+                    .option("useHeader", "true") \
+                    .option("treatEmptyValuesAsNulls", "true") \
+                    .option("inferSchema", "true") \
+                    .load(temp_path)
+            else:
+                return Response({"error": "Unsupported file type"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Error reading file with Spark: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        pattern = request.POST.get("pattern", "")
+        replacement = request.POST.get("replacement", "")
+        columns = request.POST.get("columns", "")
+        if isinstance(columns, str):
+            columns = [c.strip() for c in columns.split(",") if c.strip()]
+
+        for col in columns:
+            df = df.withColumn(col, regexp_replace(col, pattern, replacement))
+
+        token = str(uuid.uuid4())
+        output_path = f"/tmp/{token}.csv"
+        df.coalesce(1).write.csv(output_path, header=True, mode="overwrite")
+        preview = df.limit(5).toPandas().to_dict(orient="records")
+
+        return Response({
+            "filename": fname,
+            "columns": df.columns,
+            "preview": preview,
+            "download_token": token,
+            "engine": "pyspark"
+        })
 
             
