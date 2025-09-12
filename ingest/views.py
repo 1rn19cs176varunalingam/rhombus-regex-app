@@ -51,7 +51,7 @@ class UploadPreviewView(APIView):
                     df=pd.read_excel(file)
             except Exception as e:
                 return Response({"error":str(e)},status=status.HTTP_400_BAD_REQUEST)
-            preview=df.head(5).replace({np.nan: None}).to_dict(orient="records")
+            preview=df.replace({np.nan: None}).to_dict(orient="records")
             return Response({"filename":fname,"preview":preview,"columns":df.columns.tolist()})
 class TransformView(APIView):
     def post(self,request):
@@ -86,7 +86,7 @@ class TransformView(APIView):
                 except Exception as e:
                     return Response({"error":f"Error executing pandas code: {str(e)}"},status=status.HTTP_400_BAD_REQUEST)
                 token= str(uuid.uuid4())
-                file_path=f"/tmp/{token}.json"
+                file_path=f"/tmp/{token}.csv"
                 df1.to_csv(file_path,index=False)
 
                 before = df.head(5).to_dict(orient="records")
@@ -255,11 +255,21 @@ class RegexRiskAnalyzer(APIView):
     
 class DownloadTransformedView(APIView):
     def get(self, request):
-            token = request.GET.get("token")
-            file_path = f"/tmp/{token}.csv"
-            if not os.path.exists(file_path):
-                return Response({"error": "File not found"}, status=404)
-            return FileResponse(open(file_path, "rb"), as_attachment=True, filename="changed_file.csv")
+        token = request.GET.get("token")
+        path = f"/tmp/{token}.csv"
+        if not os.path.exists(path):
+            return Response({"error": "File not found"}, status=404)
+        if os.path.isfile(path):
+            return FileResponse(open(path, "rb"), as_attachment=True, filename="changed_file.csv")
+        elif os.path.isdir(path):
+            # Find the first CSV file in the directory
+            for fname in os.listdir(path):
+                if fname.endswith(".csv"):
+                    file_path = os.path.join(path, fname)
+                    return FileResponse(open(file_path, "rb"), as_attachment=True, filename="changed_file.csv")
+            return Response({"error": "CSV file not found in output directory"}, status=404)
+        else:
+            return Response({"error": "Unknown file type"}, status=400)
 
 class Databricks(APIView):
     def post(self,request):

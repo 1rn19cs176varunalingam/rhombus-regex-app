@@ -1,0 +1,11 @@
+Django>=4.0
+djangorestframework
+pandas
+numpy
+boto3
+openai
+requests
+gunicorn
+pyspark
+python-dotenv
+django-cors-headers

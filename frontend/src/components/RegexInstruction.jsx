@@ -1,5 +1,5 @@
-import React from "react";
-
+import React, { useState } from "react";
+import StyledButton from "../styles/StyledButton";
 
 export default function RegexInstruction({
   instructions,
@@ -8,6 +8,15 @@ export default function RegexInstruction({
   loading,
   preview
 }) {
+  // Optional: state for "system ready" message
+  const [systemReady, setSystemReady] = useState(false);
+
+  // Optional: your extra function
+  const handleGenerate = () => {
+    setSystemReady(true);
+    // ...any other logic you want...
+  };
+
   return (
     <div style={{ marginTop: 24, fontSize: 18, fontWeight: "bold" }}>
       <label style={{ fontSize: 13, marginBottom: 4 }}>
@@ -22,16 +31,26 @@ export default function RegexInstruction({
           style={{ width: "100%", padding: 8, marginTop: 4 }}
         />
       </label>
-      <span title={!preview ? "Please upload a file first" : ""} style={{ fontSize: 11, color: "#666" }}>
-      <button className="px-6 py-2.5 rounded-full cursor-pointer text-white hover:text-blue-700 text-sm tracking-wider font-medium border border-blue-300 outline-0 bg-blue-700 hover:bg-transparent transition-all duration-300"
-        onClick={convertInstruction}
-        
-        disabled={(loading || !instructions.trim()) || !preview}
-        style={{ padding: "8px 14px", marginTop: 8 }}
+      <span
+        title={!preview ? "Please upload a file first" : ""}
+        style={{ fontSize: 11, color: "#666" }}
       >
-        {loading ? "Converting..." : "Convert to Regex"}
-      </button>
+        <StyledButton
+          onClick={() => {
+            convertInstruction();
+            handleGenerate(); convertInstruction
+          }}
+          disabled={loading || !instructions.trim() || !preview}
+          style={{ padding: "8px 14px", marginTop: 10 }}
+        >
+          {loading ? "Converting..." : "Convert to Regex"}
+        </StyledButton>
       </span>
+      {systemReady && (
+        <div style={{ marginTop: 16, color: "#0BB489", fontWeight: "bold" }}>
+          System is ready!
+        </div>
+      )}
     </div>
   );
 }

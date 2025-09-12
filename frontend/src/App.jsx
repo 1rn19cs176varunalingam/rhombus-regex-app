@@ -8,6 +8,7 @@ import Result from './components/Result';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import PreviewPage from "./components/PreviewPage";
 import ChangesPreviewPage from "./components/ChangesPreviewPage";
+import StyledButton from './styles/StyledButton';
 
 import './App.css'
 
@@ -22,6 +23,10 @@ export default function App(){
   const [file, setFile]=useState(null);
   const [preview, setPreview]=useState(null);
   const [loading, setLoading]=useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [convertLoading, setConvertLoading] = useState(false);
+  const [transformLoading, setTransformLoading] = useState(false);
+  const [riskLoading, setRiskLoading] = useState(false);
   const[pattern,setPattern]=useState("");
   const[replacement,setReplacement]=useState("");
   const[columns,setColumns]=useState("");
@@ -55,7 +60,7 @@ export default function App(){
       const form = new FormData();
       form.append("file", file);
       try{
-        setLoading(true);
+        setUploadLoading(true);
       const {data}= await axios.post(`${API_BASE}` + "/upload/preview/", form, {
         headers: {
           "Content-Type": "multipart/form-data"
@@ -65,14 +70,16 @@ export default function App(){
       }catch(error){
         setError("Could not upload file");
       }finally{
-        setLoading(false);
-      } 
+        setUploadLoading(false);
+      }
     }
     function handlePreview(){
       navigate("/preview");
     }
     async function Transform()
     {
+      const fileSizeGB = file ? file.size / (1024 * 1024 * 1024) : 0;
+      const endpoint = fileSizeGB > 1 ? "/local-spark-transform/" : "/transform/";
       setResult(null);
       setError("");
       if( !file)
@@ -95,8 +102,8 @@ export default function App(){
       
       
       try{
-        setLoading(true);
-      const {data}= await axios.post(`${API_BASE}` + "/transform/", form, {
+        setTransformLoading(true);
+      const {data}= await axios.post(`${API_BASE}${endpoint}`, form, {
         headers: {
           "Content-Type": "multipart/form-data"
       },});
@@ -109,7 +116,7 @@ export default function App(){
         const msg=error?.response?.data?.error || error.message || "Could not transform file";
         setError(msg);
       }finally{
-        setLoading(false);
+        setTransformLoading(false);
       }
 
 
@@ -124,14 +131,14 @@ export default function App(){
         return;
       }
       try{
-        setLoading(true);
+        setConvertLoading(true);
         const columns = preview.length > 0 ? Object.keys(preview[0]) : [];
         const NoRows= preview.length;
         const sampleRows= preview.slice(0,5);
         const {data} = await axios.post(`${API_BASE}/nl2regex/`, { instruction: instructions, columns: columns,rows: sampleRows, no: NoRows || [] });
-        if(data?.pattern){
-          setPattern(data.pattern);
-        }
+ 
+        setPattern(data?.pattern ?? "");
+        
         setPandasCode(data?.pandas_code ?? "");
         setReplacement(data?.replacement ?? "");
         
@@ -146,7 +153,7 @@ export default function App(){
           const msg=error?.response?.data?.error || error.message || "Could not convert instructions";
           setError(msg);
         }finally{
-          setLoading(false);
+          setConvertLoading(false);
     }
   }
   async function analyzeRegex(){
@@ -163,7 +170,7 @@ export default function App(){
       return;
     }
     try{
-      setLoading(true);
+      setRiskLoading(true);
       const {data}= await axios.post(`${API_BASE}` + "/risk/", { pattern, replacement, allColumns, selectedColumns, sampleRows,instructions });
       console.log("Risk API response:", data);
       setAnalysis(data);
@@ -173,7 +180,7 @@ export default function App(){
       const msg=error?.response?.data?.error || error.message || "Could not analyze regex";
       setError(msg);
     }finally{
-      setLoading(false);
+      setRiskLoading(false);
     }
   }
 
@@ -205,10 +212,13 @@ export default function App(){
                 instructions={instructions}
                 setInstructions={setInstructions}
                 convertInstruction={convertInstruction}
-                loading={loading}
+                loading={convertLoading}
                 preview={preview}
               />
-              <button onClick={analyzeRegex} disabled={!pattern}>
+              <button className='bg-secondary border-secondary border bg-[#0BB489] rounded-md m-4  inline-flex items-center justify-center py-3 px-7 text-center text-base font-medium text-white hover:bg-green hover:border-[#0BB489] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5
+              disabled:cursor-not-allowed
+              
+              disabled:opacity-50' onClick={analyzeRegex} disabled={!pattern && !pandasCode}>
                 Risk Analysis:(Before changing data)
               </button>
               {analysis && (
@@ -234,26 +244,31 @@ export default function App(){
                 setColumns={setColumns}
                 flags={flags}
                 setFlags={setFlags}
-                loading={loading}
+                loading={convertLoading}
                 preview={preview}
                 Transform={Transform}
+                pandasCode={pandasCode}
               />
               <Result result={result} />
-              {message && <p style={{ color: 'green' }}>Message from API: {message}</p>}
-              {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-                    <button onClick={() => navigate('/changes-preview')} disabled={!result}>
+
+                    <button className="w-full border-2 m-4 -ml-1 border-blue-600 text-blue-600 font-bold py-3 px-6 rounded-lg hover:bg-blue-50 transition
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50" onClick={() => navigate('/changes-preview')} disabled={!result}>
         View Changes Preview
       </button>
+                    {message && <p style={{ color: 'green' }}>Message from API: {message}</p>}
+              {error && <p style={{ color: 'red' }}>Error: {error}</p>}
             </div>
             
           }
         />
-        <Route path="/preview" element={<PreviewPage preview={preview} />} />
+      <Route path="/preview" element={<PreviewPage preview={preview} />} />
 
       <Route path="/changes-preview" element={
         <ChangesPreviewPage
         changes={result?.changes || []}
         downloadToken={result?.download_token}
+        engine={result?.engine}
         
         
       />
