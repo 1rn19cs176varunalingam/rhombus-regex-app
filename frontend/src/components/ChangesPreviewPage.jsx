@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+//Component to preview the changes made by regex transformations
 const API_BASE = import.meta.env.VITE_API_BASE;
 export default function ChangesPreviewPage({ changes , downloadToken,engine}) {
   const navigate = useNavigate();

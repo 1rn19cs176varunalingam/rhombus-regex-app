@@ -215,34 +215,54 @@ class NL2RegexView(APIView):
         return Response({"pattern":pattern,"replacement":replacement,"suggested_columns":suggested_columns,"flags":flags,"pandas_code":pandas_code})
 class RegexRiskAnalyzer(APIView):
     def post(self,request):
-        pattern=(request.data or {}).get("pattern","").strip()
-        replacement=(request.data or {}).get("replacement","").strip()
-        allColumns=(request.data or {}).get("allColumns",[])
-        selectedColumns=(request.data or {}).get("selectedColumns",[])
-        sampleRows=(request.data or {}).get("sampleRows",[])
-        instructions=(request.data or {}).get("instructions","").strip()
+        pattern = (request.data or {}).get("pattern", "").strip()
+        replacement = (request.data or {}).get("replacement", "").strip()
+        allColumns = (request.data or {}).get("allColumns", [])
+        selectedColumns = (request.data or {}).get("selectedColumns", [])
+        sampleRows = (request.data or {}).get("sampleRows", [])
+        instructions = (request.data or {}).get("instructions", "").strip()
+        pandas_code = (request.data or {}).get("pandas_code", "").strip() or (request.data or {}).get("python_code", "").strip()
 
-        if not pattern:
-            return Response({"error":"No regex pattern provided"},status=status.HTTP_400_BAD_REQUEST)
-        try:
-            re.compile(pattern)
-        except re.error as e:
-            return Response({"error":f"Invalid regex pattern: {str(e)}"},status=status.HTTP_400_BAD_REQUEST)
-        client=OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        sys=(        "You are a regex risk analyzer and intent safety checker. "
-    "Given a regex pattern, replacement, selected columns, sample rows, and user instructions, "
-    "output JSON with two fields: "
-    "'risk_percent' (an integer from 0 to 100, estimating the combined risk of this pattern causing technical issues "
-    "like catastrophic backtracking, false positives, or performance problems, AND the risk that the user's intent is malicious, unethical, or dangerous), "
-    "and 'reason' (a one-line explanation for the risk score, mentioning both technical and intent factors if relevant). "
-    "Example: {'risk_percent': 80, 'reason': 'Pattern has nested quantifiers (technical risk) and user intent is to delete sensitive data (intent risk).'} "
-    "Be concise and accurate. Only output valid JSON.")
-        resp=client.chat.completions.create(
-            model="gpt-4o-mini"
-            ,messages=[{"role":"system","content":sys},
-                      {"role":"user","content":f"Regex Pattern: {pattern} \nReplacement: {replacement}\nAll Columns: {allColumns}\nSelected Columns: {selectedColumns}\nSample Rows: {sampleRows}\nInstructions: given by user : {instructions}"}],
-                      temperature=0.3,
-                      max_tokens=300,
+        if not pattern and not pandas_code:
+            return Response({"error": "No regex pattern or code provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        if pattern:
+            try:
+                re.compile(pattern)
+            except re.error as e:
+                return Response({"error": f"Invalid regex pattern: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            sys = (
+                "You are a regex risk analyzer and intent safety checker. "
+                "Given a regex pattern, replacement, selected columns, sample rows, and user instructions, "
+                "output JSON with two fields: "
+                "'risk_percent' (an integer from 0 to 100, estimating the combined risk of this pattern causing technical issues "
+                "like catastrophic backtracking, false positives, or performance problems, AND the risk that the user's intent is malicious, unethical, or dangerous), "
+                "and 'reason' (a one-line explanation for the risk score, mentioning both technical and intent factors if relevant). "
+                "Example: {'risk_percent': 80, 'reason': 'Pattern has nested quantifiers (technical risk) and user intent is to delete sensitive data (intent risk).'} "
+                "Be concise and accurate. Only output valid JSON."
+            )
+            user_content = f"Regex Pattern: {pattern} \nReplacement: {replacement}\nAll Columns: {allColumns}\nSelected Columns: {selectedColumns}\nSample Rows: {sampleRows}\nInstructions: given by user : {instructions}"
+        else:
+            sys = (
+                "You are a code risk analyzer and intent safety checker. "
+                "Given a pandas/python code snippet, selected columns, sample rows, and user instructions, "
+                "output JSON with two fields: "
+                "'risk_percent' (an integer from 0 to 100, estimating the combined risk of this code causing technical issues "
+                "like data loss, performance problems, or security risks, AND the risk that the user's intent is malicious, unethical, or dangerous), "
+                "and 'reason' (a one-line explanation for the risk score, mentioning both technical and intent factors if relevant). "
+                "Example: {'risk_percent': 80, 'reason': 'Code drops columns (technical risk) and user intent is to delete sensitive data (intent risk).'} "
+                "Be concise and accurate. Only output valid JSON."
+            )
+            user_content = f"Python/Pandas Code: {pandas_code}\nAll Columns: {allColumns}\nSelected Columns: {selectedColumns}\nSample Rows: {sampleRows}\nInstructions: given by user : {instructions}"
+
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": sys},
+                      {"role": "user", "content": user_content}],
+            temperature=0.3,
+            max_tokens=300,
         )
         result = resp.choices[0].message.content.strip()
         try:
@@ -251,7 +271,7 @@ class RegexRiskAnalyzer(APIView):
             reason = parsed.get("reason", "")
         except Exception as e:
             return Response({"error": f"Could not parse risk assessment: {str(e)}", "raw": result}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        return Response({"pattern": pattern, "risk_percent": risk_percent, "reason": reason})  
+        return Response({"pattern": pattern, "pandas_code": pandas_code, "risk_percent": risk_percent, "reason": reason})
     
 class DownloadTransformedView(APIView):
     def get(self, request):

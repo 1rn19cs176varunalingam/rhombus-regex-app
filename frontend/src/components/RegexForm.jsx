@@ -1,5 +1,5 @@
 import React from "react";
-
+//Component to handle user input for regex pattern, replacement, columns, and flags
 export default function RegexForm({
   pattern,
   setPattern,

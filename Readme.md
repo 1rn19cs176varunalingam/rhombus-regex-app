@@ -167,5 +167,13 @@ The Risk analysis is an another feature I have provided within my app. This is j
 
 ## Additional Notes
 
-- For **Databricks and S3 integration**,
+- For **Databricks and S3 integration**, I have not added it to the app. But I have not this feature becuase the databricks clusters would take money to run. So, I removed it from the app.
+
+## How to Use:
+
+1. Upload a CSV file to the app.
+2. Choose a regex pattern to transform the data.
+3. You can click on "Risk Analysis" to see what the problem would be about the regex pattern.
+4. The AI would autofill your table with the pattern and replacement value.
+5. You can also download the transformed file after previewing the changes.
 

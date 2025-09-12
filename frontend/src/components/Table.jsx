@@ -1,5 +1,5 @@
 import React from "react";
-
+//component to display tabular data with given columns and rows
 export default function Table({ columns = [], rows = [] }) {
   return (
     <div style={{ maxHeight: 480, overflow: "auto" }}>

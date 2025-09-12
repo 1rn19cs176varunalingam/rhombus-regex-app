@@ -1,4 +1,5 @@
 export default function FileUpload({ file, setFile, uploadFile, loading, onPreview, previewReady }) {
+  //Component to handle file upload and preview
   return (
     <div className="mb-3 flex gap-4 items-center">
       <input

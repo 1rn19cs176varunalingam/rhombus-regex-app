@@ -1,5 +1,7 @@
+
+//importing all the necessary libraries and components
 import { useState } from 'react'
-import axios from 'axios'
+import axios from 'axios'// using axios to make api calls
 import Table from './components/Table';
 import FileUpload from './components/FileUpload';
 import RegexInstruction from './components/RegexInstruction';
@@ -12,11 +14,12 @@ import StyledButton from './styles/StyledButton';
 
 import './App.css'
 
-
+//setting up the base url for the api
 const API_BASE= import.meta.env.VITE_API_BASE;
 
 export default function App(){
 
+  //Here, I have defined all the states required for the app
   const navigate=useNavigate();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -36,7 +39,7 @@ export default function App(){
   const [pandasCode, setPandasCode] = useState("");
   const[instructions,setInstructions]=useState("");
   const[downloadToken,setDownloadToken]=useState("");
-
+//Used this to just check with he backend
   async function ping(){
     
     setError("");
@@ -49,6 +52,7 @@ export default function App(){
       setError("Could not fetch data");
     }
   }
+  //Function to upload the file to the backend
       async function uploadFile(){
       setPreview(null);
       setError("");
@@ -73,13 +77,15 @@ export default function App(){
         setUploadLoading(false);
       }
     }
+    //Function to navigate to the preview page
     function handlePreview(){
       navigate("/preview");
     }
+    //Function to transform the file based on the regex pattern
     async function Transform()
     {
       const fileSizeGB = file ? file.size / (1024 * 1024 * 1024) : 0;
-      const endpoint = fileSizeGB > 1 ? "/local-spark-transform/" : "/transform/";
+      const endpoint = fileSizeGB > 1 ? "/local-spark-transform/" : "/transform/";//checking file size to whether to use spark or not
       setResult(null);
       setError("");
       if( !file)
@@ -124,6 +130,7 @@ export default function App(){
 
 
     }
+    //Function to convert the natural language instructions to regex pattern
     async function convertInstruction(){
       setError("");
       if(!instructions.trim()){
@@ -156,6 +163,7 @@ export default function App(){
           setConvertLoading(false);
     }
   }
+  //function to analyze the regex pattern for potential risks
   async function analyzeRegex(){
     setAnalysis(null);
     setError("");
@@ -165,13 +173,13 @@ export default function App(){
       ? columns.split(",").map(col => col.trim()).filter(Boolean)
       : [];
     const sampleRows = preview ? preview.slice(0, 5) : [];
-    if(!pattern.trim()){
+    if(!pattern.trim() && !pandasCode.trim()){
       setError("Please provide a regex pattern");
       return;
     }
     try{
       setRiskLoading(true);
-      const {data}= await axios.post(`${API_BASE}` + "/risk/", { pattern, replacement, allColumns, selectedColumns, sampleRows,instructions });
+      const {data}= await axios.post(`${API_BASE}` + "/risk/", { pattern, replacement, allColumns, selectedColumns, sampleRows,instructions, pandas_code: pandasCode });
       console.log("Risk API response:", data);
       setAnalysis(data);
       document.querySelector(".analysis-box")?.scrollIntoView({ behavior: "smooth" });
@@ -186,7 +194,7 @@ export default function App(){
 
   
 
-
+//The main return function which renders the components and sets up the routes
   return (
     <div>
       <h1 className="text-4xl font-extrabold text-center text-blue-600 py-6 mb-8 border-b border-gray-300">
@@ -198,8 +206,6 @@ export default function App(){
           path="/"
           element={
             <div>
-              <h1>API Health Check</h1>
-      <button onClick={ping}>Ping API</button>
               <FileUpload
                 file={file}
                 setFile={setFile}
@@ -254,7 +260,7 @@ export default function App(){
                     <button className="w-full border-2 m-4 -ml-1 border-blue-600 text-blue-600 font-bold py-3 px-6 rounded-lg hover:bg-blue-50 transition
                     disabled:cursor-not-allowed
                     disabled:opacity-50" onClick={() => navigate('/changes-preview')} disabled={!result}>
-        View Changes Preview
+        View Changes and Download File
       </button>
                     {message && <p style={{ color: 'green' }}>Message from API: {message}</p>}
               {error && <p style={{ color: 'red' }}>Error: {error}</p>}

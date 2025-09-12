@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import StyledButton from "../styles/StyledButton";
-
+//Component to handle user instructions for regex pattern generation
 export default function RegexInstruction({
   instructions,
   setInstructions,
@@ -8,13 +8,13 @@ export default function RegexInstruction({
   loading,
   preview
 }) {
-  // Optional: state for "system ready" message
+  
   const [systemReady, setSystemReady] = useState(false);
 
-  // Optional: your extra function
+
   const handleGenerate = () => {
     setSystemReady(true);
-    // ...any other logic you want...
+
   };
 
   return (
@@ -46,7 +46,7 @@ export default function RegexInstruction({
           {loading ? "Converting..." : "Convert to Regex"}
         </StyledButton>
       </span>
-      {systemReady && (
+      {systemReady && !loading && (
         <div style={{ marginTop: 16, color: "#0BB489", fontWeight: "bold" }}>
           System is ready!
         </div>

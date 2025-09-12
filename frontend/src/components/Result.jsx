@@ -1,6 +1,6 @@
 import React from "react";
 import Table from "./Table";
-
+//component to display the result section with before and after transformation data
 export default function ResultSection({ result }) {
   if (!result) return null;
   return (
