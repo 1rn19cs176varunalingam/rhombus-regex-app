@@ -83,19 +83,7 @@ You can just access the frontend to run the app using the following url:
 
 
 
-#### Option 2: Using Local Setup:
 
-```bash
-# Clone the repository
-git clone https://github.com/1rn19cs176varunalingam/rhombus-regex-app.git
-cd rhombus-regex-app
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-
-- This will install all the required packages and dependencies for the application.
 
 
 
@@ -154,6 +142,14 @@ pip install -r requirements.txt
 
 
 ---
+## How to Use:
+
+1. Upload a CSV file to the app.
+2. Choose a regex pattern to transform the data.
+3. You can click on "Risk Analysis" to see what the problem would be about the regex pattern.
+4. The AI would autofill your table with the pattern and replacement value.
+5. You can also download the transformed file after previewing the changes.
+---
 
 ## Risk Analysis
 
@@ -167,7 +163,7 @@ The Risk analysis is an another feature I have provided within my app. This is j
 
 ## Additional Notes
 
-- For **Databricks and S3 integration**, I have not added it to the app. But I have not this feature becuase the databricks clusters would take money to run. So, I removed it from the app.
+- For **Databricks and S3 integration**, I have added this feature withint the code which has a serpearte view available on views.py on ingest subfolder. But I have not called it in frontend as databricks cluster will cost us money. This is only an implmentation for huge files which are very large.
 
 ## How to Use:
 

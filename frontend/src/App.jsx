@@ -1,4 +1,3 @@
-
 //importing all the necessary libraries and components
 import { useState } from 'react'
 import axios from 'axios'// using axios to make api calls
@@ -39,6 +38,9 @@ export default function App(){
   const [pandasCode, setPandasCode] = useState("");
   const[instructions,setInstructions]=useState("");
   const[downloadToken,setDownloadToken]=useState("");
+  const [fileError, setFileError] = useState("");
+  const [convertError, setConvertError] = useState("");
+  const [riskError, setRiskError] = useState("");
 //Used this to just check with he backend
   async function ping(){
     
@@ -55,10 +57,10 @@ export default function App(){
   //Function to upload the file to the backend
       async function uploadFile(){
       setPreview(null);
-      setError("");
+      setFileError("");
       setMessage("");
       if(!file){
-        setError("Please select a file");
+        setFileError("Please select a file");
         return;
       }
       const form = new FormData();
@@ -68,14 +70,15 @@ export default function App(){
       const {data}= await axios.post(`${API_BASE}` + "/upload/preview/", form, {
         headers: {
           "Content-Type": "multipart/form-data"
-      },});
+        },
+      });
       setPreview(data.preview);
       setMessage("File uploaded successfully");
-      }catch(error){
-        setError("Could not upload file");
-      }finally{
-        setUploadLoading(false);
-      }
+    }catch(error){
+      setFileError("Could not upload file");
+    }finally{
+      setUploadLoading(false);
+    }
     }
     //Function to navigate to the preview page
     function handlePreview(){
@@ -132,9 +135,9 @@ export default function App(){
     }
     //Function to convert the natural language instructions to regex pattern
     async function convertInstruction(){
-      setError("");
+      setConvertError("");
       if(!instructions.trim()){
-        setError("Please provide instructions");
+        setConvertError("Please provide instructions");
         return;
       }
       try{
@@ -158,7 +161,7 @@ export default function App(){
       }
         catch(error){
           const msg=error?.response?.data?.error || error.message || "Could not convert instructions";
-          setError(msg);
+          setConvertError(msg);
         }finally{
           setConvertLoading(false);
     }
@@ -166,7 +169,7 @@ export default function App(){
   //function to analyze the regex pattern for potential risks
   async function analyzeRegex(){
     setAnalysis(null);
-    setError("");
+    setRiskError("");
         const allColumns = preview && preview.length > 0 ? Object.keys(preview[0]) : [];
 
     const selectedColumns = columns
@@ -174,7 +177,7 @@ export default function App(){
       : [];
     const sampleRows = preview ? preview.slice(0, 5) : [];
     if(!pattern.trim() && !pandasCode.trim()){
-      setError("Please provide a regex pattern");
+      setRiskError("Please provide a regex pattern");
       return;
     }
     try{
@@ -183,10 +186,9 @@ export default function App(){
       console.log("Risk API response:", data);
       setAnalysis(data);
       document.querySelector(".analysis-box")?.scrollIntoView({ behavior: "smooth" });
-  }
-    catch(error){
+    }catch(error){
       const msg=error?.response?.data?.error || error.message || "Could not analyze regex";
-      setError(msg);
+      setRiskError(msg);
     }finally{
       setRiskLoading(false);
     }
@@ -214,6 +216,7 @@ export default function App(){
                 onPreview={handlePreview}
                 previewReady={!!preview}
               />
+              {fileError && <p style={{ color: 'red' }}>Error: {fileError}</p>}
               <RegexInstruction
                 instructions={instructions}
                 setInstructions={setInstructions}
@@ -221,12 +224,13 @@ export default function App(){
                 loading={convertLoading}
                 preview={preview}
               />
+              {convertError && <p style={{ color: 'red' }}>Error: {convertError}</p>}
               <button className='bg-secondary border-secondary border bg-[#0BB489] rounded-md m-4  inline-flex items-center justify-center py-3 px-7 text-center text-base font-medium text-white hover:bg-green hover:border-[#0BB489] disabled:bg-gray-3 disabled:border-gray-3 disabled:text-dark-5
               disabled:cursor-not-allowed
-              
               disabled:opacity-50' onClick={analyzeRegex} disabled={!pattern && !pandasCode}>
                 Risk Analysis:(Before changing data)
               </button>
+              {riskError && <p style={{ color: 'red' }}>Error: {riskError}</p>}
               {analysis && (
                 <div className="my-4">
                   <div className="mb-2 font-semibold">Regex Risk Assessment</div>
@@ -284,12 +288,12 @@ export default function App(){
   );
 }
 
-  
 
-  
-        
 
-  
+
+
+
+
 
 
 

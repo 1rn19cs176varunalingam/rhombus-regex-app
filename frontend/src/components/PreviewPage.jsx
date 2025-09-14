@@ -59,7 +59,7 @@ export default function PreviewPage({ preview }) {
             </div>
           ))}
         </div>
-        {/* Virtualized rows */}
+        {/* Virtualized rows to load only required rows */}
         <List
           height={550}
           itemCount={preview.length}
