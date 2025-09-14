@@ -162,10 +162,10 @@ cd rhombus-regex-app
      ```
 
 3. **Access the app**
-   - Open your browser and go to: [http://localhost:3000](http://localhost:3000)
-   - The backend API will be available at: [http://localhost:8000](http://localhost:8000)
+   - Open your browser and go to: [http://localhost:5173](http://localhost:5173)
+  
 
-*Make sure both the backend and frontend servers are running for the app to work fully!*
+Both the servers should be working for the url to open.
 
 
 
