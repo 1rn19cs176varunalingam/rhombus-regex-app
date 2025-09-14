@@ -4,8 +4,7 @@ services:
     image: varun891452/my-backend:latest
     ports:
       - "8000:8000"
-    env_file:
-      - .env
+
   frontend:
     image: varun891452/my-frontend:latest
     ports:
