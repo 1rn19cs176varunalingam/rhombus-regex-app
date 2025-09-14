@@ -188,11 +188,3 @@ The Risk analysis is an another feature I have provided within my app. This is j
 - For **Databricks and S3 integration**, I have added this feature withint the code which has a serpearte view available on views.py on ingest subfolder. But I have not called it in frontend as databricks cluster will cost us money. This is only an implmentation for huge files which are very large.
 - The instruction from the user can also handle many different types of data transformations tasks.( dealing with numbers, dates, strings etc and also take commands like "double everyone's age" etc.)
 
-## How to Use:
-
-1. Upload a CSV file to the app.
-2. Choose a regex pattern to transform the data.
-3. You can click on "Risk Analysis" to see what the problem would be about the regex pattern.
-4. The AI would autofill your table with the pattern and replacement value.
-5. You can also download the transformed file after previewing the changes.
-
