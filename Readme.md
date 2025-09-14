@@ -69,12 +69,28 @@ git clone https://github.com/1rn19cs176varunalingam/rhombus-regex-app.git
 cd rhombus-regex-app
 ```
 
-### 3. The OpenAI API key:
-A new key has to be generated and added to the `.env` file. This key is used to access the OpenAI API.
-```bash
-OPENAI_API_KEY=your-openai-key-here
-```
-Or I have key and token saved in the vault which could be made use of in case needing a the api key for which I have to provide the permission.
+### 3. The OpenAI API key is set in the Dockerfile
+
+The backend Docker image is built with the OpenAI API key already set as an environment variable. You do not need to create a `.env` file or set the key manually for Docker usage.
+
+
+I also have a OpenAPI key to which I have to give access to which I could provide you.
+
+**To update the backend image with a new API key:**
+1. Edit the backend Dockerfile and set your key:(in dockerFile present in the src)
+   ```dockerfile
+   ENV OPENAI_API_KEY=your-openai-key-here
+   ```
+2. Build and push the backend image:
+   ```sh
+   docker build -t varun891452/my-backend:latest .
+   docker push varun891452/my-backend:latest
+   ```
+3. Restart your containers:
+   ```sh
+   docker-compose pull
+   docker-compose up
+   ```
 
 ### 4. Build and run the containers
 This will make use of two images and a docker-compose file.
@@ -112,7 +128,7 @@ You can just access the frontend to run the app using the following url:
      ```bash
      pip install -r requirements.txt
      ```
-   - You will need to set up an open api key: 
+   - You will need to set up an open api key: (in .env)
      ```bash
      export OPENAI_API_KEY=your-openai-key-here
      ```
