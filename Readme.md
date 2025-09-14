@@ -113,6 +113,12 @@ You can just access the frontend to run the app using the following url:
 
 
 #### Option 2: Local Setup
+Clone the repository
+```bash
+git clone https://github.com/1rn19cs176varunalingam/rhombus-regex-app.git
+cd rhombus-regex-app
+```
+
 
 1. **Backend (Django API)**
    - Open a terminal and navigate to the project root in my case it is rhombus-regex-app:
