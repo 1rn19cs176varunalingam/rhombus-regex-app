@@ -3,7 +3,9 @@
 This application that I have created is used to look for patterns in the file submitted by the user and takes in a natural language input from the user. This is then used to replace the pattern with the suggested replacement. I have added a lot more features to this app- to handle many data operations, a system design that could handle large files even >100gbs and also a risk assessment to warn the user what could happen with such a change.
 ## Demo Video
 
-Below is a short demo video showing the app in action:
+[![Demo Video](https://img.youtube.com/vi/nsKpgITSh-Q/0.jpg)](https://youtu.be/nsKpgITSh-Q)
+
+*(Click link for demo on YouTube)*
 
 
 
@@ -68,7 +70,11 @@ cd rhombus-regex-app
 ```
 
 ### 3. The OpenAI API key:
-This is already set within my docker image so, you would not be required to create one manually.
+A new key has to be generated and added to the `.env` file. This key is used to access the OpenAI API.
+```bash
+OPENAI_API_KEY=your-openai-key-here
+```
+Or I have key and token saved in the vault which could be made use of in case needing a the api key for which I have to provide the permission.
 
 ### 4. Build and run the containers
 This will make use of two images and a docker-compose file.
@@ -106,7 +112,7 @@ You can just access the frontend to run the app using the following url:
      ```bash
      pip install -r requirements.txt
      ```
-   - You will need to set up an open api key: but on docker image i have already set that in the image
+   - You will need to set up an open api key: 
      ```bash
      export OPENAI_API_KEY=your-openai-key-here
      ```
@@ -164,6 +170,7 @@ The Risk analysis is an another feature I have provided within my app. This is j
 ## Additional Notes
 
 - For **Databricks and S3 integration**, I have added this feature withint the code which has a serpearte view available on views.py on ingest subfolder. But I have not called it in frontend as databricks cluster will cost us money. This is only an implmentation for huge files which are very large.
+- The instruction from the user can also handle many different types of data transformations tasks.( dealing with numbers, dates, strings etc and also take commands like "double everyone's age" etc.)
 
 ## How to Use:
 
