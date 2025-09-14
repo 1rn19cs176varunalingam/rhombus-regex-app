@@ -69,9 +69,9 @@ git clone https://github.com/1rn19cs176varunalingam/rhombus-regex-app.git
 cd rhombus-regex-app
 ```
 
-### 3. The OpenAI API key is set in the Dockerfile
+### 3. The OpenAI API key is set in the Dockerfile:(Follow the instruction provided in the end of this page to set up one)
 
-The backend Docker image is built with the OpenAI API key already set as an environment variable. You do not need to create a `.env` file or set the key manually for Docker usage.
+The backend Docker image is built with the OpenAI API key already set as an environment variable. This docker file is present in the src folder with the env variable set and only the value has to be provided. You do not need to create a `.env` file or set the key manually for Docker usage.
 
 
 I also have a OpenAPI key to which I have to give access to which I could provide you.
@@ -193,4 +193,15 @@ The Risk analysis is an another feature I have provided within my app. This is j
 
 - For **Databricks and S3 integration**, I have added this feature withint the code which has a serpearte view available on views.py on ingest subfolder. But I have not called it in frontend as databricks cluster will cost us money. This is only an implmentation for huge files which are very large.
 - The instruction from the user can also handle many different types of data transformations tasks.( dealing with numbers, dates, strings etc and also take commands like "double everyone's age" etc.)
+
+
+---
+## Creating a New OpenAI API Key
+
+to create a new open api key
+
+1. Go to [OpenAI API Keys page](https://platform.openai.com/api-keys).
+2. Sign in or create an OpenAI account.
+3. Click "Create new secret key" and copy the generated key.
+4. Add your API key as instructed in the setup (e.g., in your `.env` file or as an environment variable for Docker type of usage).
 
